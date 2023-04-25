@@ -1,4 +1,7 @@
 #include <Adafruit_NeoPixel.h>
+#include <string.h>
+#include <MemoryFree.h>
+
 
 #define PIN 6
 #define NUM_LEDS 512
@@ -101,9 +104,11 @@ void print_led_indexing() {
 // given the wack position in array (ex. value from 0 to 511)
 // convert the value to the actual position (row, col) to light up using array indexing
 int* pos_to_idx(int pos) {
-  int row = (pos % NUM_LEDS) / NUM_COLS;
-  int col = (pos % NUM_LEDS) % NUM_COLS;
-  return new int[2]{row, col};  
+  // int row = (pos % NUM_LEDS) / NUM_COLS;
+  // int col = (pos % NUM_LEDS) % NUM_COLS;
+  int row = pos / NUM_COLS;
+  int col = pos % NUM_COLS;
+  return new int[2] {row, col};
 }
 
 void setup() {
@@ -112,6 +117,10 @@ void setup() {
   
   strip.begin();
   strip.setBrightness(BRIGHTNESS);
+
+  // for (int i = 0; i < NUM_COLS; i++) {
+  //   OCCUPIED[32][i] = 1;
+  // }
 }
 
 void loop() {
@@ -119,12 +128,33 @@ void loop() {
   // strip.setPixelColor(LED_INDEXING[0][6], strip.Color(0, 255, 0));
   // strip.show();
 
-  // generate(BLUE);
-  // int* shape_idxs = genI();
+  // int free_memory = freeMemory();
+  // Serial.print("Free memory BEFORE: ");
+  // Serial.println(free_memory);
 
   int* shapeArray = genI();
-  drop(shapeArray, 4, GREEN);
+  drop(shapeArray, 4, RED);
+
+  // shapeArray = genZ();
+  // drop(shapeArray, 4, GREEN);
+
+  // shapeArray = genS();
+  // drop(shapeArray, 4, BLUE);
   
+  // shapeArray = genJ();
+  // drop(shapeArray, 4, RED);
+
+  // shapeArray = genL();
+  // drop(shapeArray, 4, GREEN);
+
+  // shapeArray = genT();
+  // drop(shapeArray, 4, BLUE);
+
+  // shapeArray = genO();
+  // drop(shapeArray, 4, RED);
+
+  delete[] shapeArray;
+
   // chase(strip.Color(0, 255, 0)); // Green
   // chase(strip.Color(0, 0, 255)); // Blue
   // colorWipe(strip.Color(255, 0, 0), 50);      // Red
@@ -140,34 +170,25 @@ void loop() {
   delay(500);
 }
 
-void generate(uint32_t color) {
-  int* (*generateFuncs[])() = {genI, genZ, genS, genJ, genL, genT, genO};
-  int generateFuncs_size = 7;
+// void generate(uint32_t color) {
+//   int* (*generateFuncs[])() = {genI, genZ, genS, genJ, genL, genT, genO};
+//   int generateFuncs_size = 7;
 
-  int randIdx = random(7);
-  Serial.println(randIdx);
-  int* shape_idxs = generateFuncs[randIdx]();
-  turn_on_idxs(shape_idxs, SHAPE_SIZE, BLUE);
-  delay(1500);
-  turn_off_idxs(shape_idxs, SHAPE_SIZE);
-  delay(1500);
-
-  // int* idxs;
-  // for (int i = 0; i < generateFuncs_size; i++) {
-  //   Serial.println(i);
-  //   int* shape_idxs = generateFuncs[i]();
-  //   turn_on_idxs(shape_idxs, SHAPE_SIZE, BLUE);
-  //   delay(1500);
-  //   turn_off_idxs(shape_idxs, SHAPE_SIZE);
-  //   delay(1500);
-  // }
-}
+//   int randIdx = random(7);
+//   Serial.println(randIdx);
+//   int* shape_idxs = generateFuncs[randIdx]();
+//   turn_on_idxs(shape_idxs, SHAPE_SIZE, BLUE);
+//   delay(1500);
+//   turn_off_idxs(shape_idxs, SHAPE_SIZE);
+//   delay(1500);
+// }
 
 void turn_on_idxs(int* shape_idxs, int idxs_size, uint32_t color) {
   for (int i = 0; i < idxs_size; i++) {
     int* rc = pos_to_idx(shape_idxs[i]);
     int r = rc[0], c = rc[1];
     strip.setPixelColor(LED_INDEXING[r][c], color);
+    delete[] rc;
   }
   strip.show();
 }
@@ -177,6 +198,7 @@ void turn_off_idxs(int* idxs, int idxs_size) {
     int* rc = pos_to_idx(idxs[i]);
     int r = rc[0], c = rc[1];
     strip.setPixelColor(LED_INDEXING[r][c], 0);
+    delete[] rc;
   }
   strip.show();
 }
@@ -189,49 +211,46 @@ int* getNextPos(int* pos, int size) {
   return newPos;
 }
 
-bool isCollision(int* pos, int size) {
-  bool collide = false;
-  for (int i = 0; i < size; i++) {
-    if (pos[i] >= 512) {
-      collide = true;
-      break;
-    }
+bool isNextACollision(int* pos, int size) {
+  for (int i = size - 1; i >= 0; i--) {
     int* rc = pos_to_idx(pos[i]);
     int row = rc[0], col = rc[1];
+    delete[] rc;
     if (OCCUPIED[row][col] == 1) {
-      collide = true;
-    }
-    else if (row >= NUM_ROWS) {
-      collide = true;
+      // Serial.println("hit another block");
+      return true;
+    } else if (row >= NUM_ROWS) {
+      // Serial.println("hit bottom");
+      return true;
     }
   }
-  return collide;
+  return false;
 }
 
-void drop(int* shape, int size, uint32_t color) {
+void drop(int* curr_idxs, int size, uint32_t color) {
   while (true) {
-    int* nextPos = getNextPos(shape, size);
-    if (isCollision(nextPos, size)) {
+    int* next_idxs = getNextPos(curr_idxs, size);
+
+    bool isCollision = isNextACollision(next_idxs, size);
+    if (isCollision) { // if moving results in collision, don't move, set OCCUPIED with current locations
       for (int i = 0; i < size; i++) {
-        int* rc = pos_to_idx(shape[i]);
+        int* rc = pos_to_idx(curr_idxs[i]);
         int row = rc[0], col = rc[1];
-        int pr = row - 1;
-        strip.setPixelColor(LED_INDEXING[row][col], color);
-        strip.setPixelColor(LED_INDEXING[pr][col], 0);
+        delete[] rc;
         OCCUPIED[row][col] = 1;
       }
       break;
     } else {
-      for (int i = 0; i < size; i++) {
-        int* rc = pos_to_idx(shape[i]);
-        int row = rc[0], col = rc[1];
-        int pr = row - 1;
-        strip.setPixelColor(LED_INDEXING[row][col], color);
-        strip.setPixelColor(LED_INDEXING[pr][col], 0);
-        shape[i] += 16;
-      }      
+      turn_off_idxs(curr_idxs, SHAPE_SIZE);
+      turn_on_idxs(next_idxs, SHAPE_SIZE, color);
     }
+    
     strip.show();
+    
+    for (int i = 0; i < SHAPE_SIZE; i++) {
+      curr_idxs[i] = next_idxs[i];
+    }
+    delete[] next_idxs;
     delay(100);
   }
 }
@@ -270,6 +289,10 @@ int* genO() {
   int* idxs = new int[4] {0, 1, 16, 17};
   return idxs;
 }
+
+// void copyArray(int* source, int* destination, int size) {
+//   memcpy(destination, source, size * sizeof(int));
+// }
 
 // other methods
 void chase(uint32_t c) {
