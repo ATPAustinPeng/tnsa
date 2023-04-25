@@ -8,6 +8,7 @@
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 int LED_INDEXING[32][16];
+int occupied[33][16];
 
 // commonly used colors
 uint32_t RED = strip.Color(255, 0, 0);
@@ -98,6 +99,10 @@ void setup() {
   
   strip.begin();
   strip.setBrightness(BRIGHTNESS);
+
+  for (int i = 0; i < 16; i++) {
+    occupied[32][i] = 1;
+  }
 }
 
 void loop() {
@@ -105,14 +110,17 @@ void loop() {
   // strip.setPixelColor(LED_INDEXING[0][6], strip.Color(0, 255, 0));
 
   int* shapeArray = generateLine(GREEN);
-  shapeArray = generateZ(BLUE);
-  shapeArray = generateZ_reverse(BLUE);
-  shapeArray = generateL(BLUE);
-  shapeArray = generateL_reverse(BLUE);
-  shapeArray = generateT(BLUE);
-  shapeArray = generateBox(BLUE);
+  drop(getNextPos(shapeArray, 4), 4, GREEN);
+
+
+  // shapeArray = generateZ(BLUE);
+  // shapeArray = generateZ_reverse(BLUE);
+  // shapeArray = generateL(BLUE);
+  // shapeArray = generateL_reverse(BLUE);
+  // shapeArray = generateT(BLUE);
+  // shapeArray = generateBox(BLUE);
   // int shapeArrayLen = sizeof(shapeArray) / sizeof(int);
-  int arrSize = 4;
+  // int arrSize = 4;
   // for (int i = 0; i < arrSize; i++) {
   //   Serial.print(shapeArray[i]);
   //   Serial.print(" ");
@@ -123,6 +131,12 @@ void loop() {
   //   shapeArray = drop(shapeArray, 4, strip.Color(0, 255, 0));
   //   delay(1000);
   // }
+  
+  
+  
+  
+  
+  
   
   // chase(strip.Color(0, 255, 0)); // Green
   // chase(strip.Color(0, 0, 255)); // Blue
@@ -233,17 +247,71 @@ int* generateBox(uint32_t color) {
   return idxs;
 }
 
-int* drop(int* shape, int size, uint32_t c) {
+int* getNextPos(int* pos, int size) {
   for (int i = 0; i < size; i++) {
-    int row = (shape[i] % NUM_LEDS) / NUM_COLS;
-    int col = (shape[i] % NUM_LEDS) % NUM_COLS;
-    int newRow = row + 1;
-    strip.setPixelColor(LED_INDEXING[newRow][col], c);
-    strip.setPixelColor(LED_INDEXING[row][col], 0);
-    strip.show();
-    shape[i] += 16;
+    pos[i] += 16;
   }
-  return shape;
+  return pos;
+}
+
+bool isCollision(int* pos, int size) {
+  bool collide = false;
+  for (int i = 0; i < size; i++) {
+    int* rc = pos_to_idx(pos[i]);
+    int row = rc[0], col = rc[1];
+    if (occupied[row][col] == 1) {
+      collide = true;
+    }
+    else if (row == NUM_ROWS - 1) {
+      collide = true;
+    }
+  }
+  return collide;
+}
+
+void drop(int* shape, int size, uint32_t c) {
+  // for (int i = 0; i < 32; i++) {
+  //   for (int j = 0; j < 16; i++) {
+  //     Serial.print(occupied[i][j]);
+  //     Serial.print(" ");
+  //   }
+  //   Serial.println(" ");
+  // }
+  while (true) {
+    // bool collide = 
+    if (isCollision(shape, size)) {
+      for (int i = 0; i < size; i++) {
+        int* rc = pos_to_idx(shape[i]);
+        int row = rc[0], col = rc[1];
+        int pr = row - 1;
+        strip.setPixelColor(LED_INDEXING[row][col], c);
+        strip.setPixelColor(LED_INDEXING[pr][col], 0);
+        strip.show();
+        occupied[row][col] = 1;
+      }
+      break;
+    } else {
+      for (int i = 0; i < size; i++) {
+        int* rc = pos_to_idx(shape[i]);
+        int row = rc[0], col = rc[1];
+        int pr = row - 1;
+        strip.setPixelColor(LED_INDEXING[row][col], c);
+        strip.setPixelColor(LED_INDEXING[pr][col], 0);
+        strip.show();
+        // occupied[row][col] = 1;
+        shape[i] += 16;
+      }      
+    }
+  }
+  Serial.println("out of loop");
+
+  for (int i = 0; i < 33; i++) {
+    for (int j = 0; j < 16; j++) {
+      Serial.print(occupied[i][j]);
+      Serial.print(",");
+    }
+    Serial.println();
+  }
 }
 
 
