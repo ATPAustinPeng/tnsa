@@ -9,6 +9,11 @@
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 int LED_INDEXING[32][16];
 
+// commonly used colors
+uint32_t RED = strip.Color(255, 0, 0);
+uint32_t GREEN = strip.Color(0, 255, 0);
+uint32_t BLUE = strip.Color(0, 0, 255);
+
 void create_led_indexing() {
   int leds_per_strip = 256;
   int step_size = 8;
@@ -79,6 +84,13 @@ void print_led_indexing() {
   }
 }
 
+// given the wack position in array (ex. value from 0 to 511)
+// convert the value to the actual position to light up (following array indexing)
+int* pos_to_idx(int pos) {
+  int row = (pos % NUM_LEDS) / NUM_COLS;
+  int col = (pos % NUM_LEDS) % NUM_COLS;
+  return new int[2]{row, col};  
+}
 
 void setup() {
   Serial.begin(9600);
@@ -89,26 +101,155 @@ void setup() {
 }
 
 void loop() {
-  chase(strip.Color(255, 0, 0)); // Red
+  // chase(strip.Color(255, 0, 0)); // Red
+  // strip.setPixelColor(LED_INDEXING[0][6], strip.Color(0, 255, 0));
+
+  int* shapeArray = generateLine(GREEN);
+  shapeArray = generateZ(BLUE);
+  shapeArray = generateZ_reverse(BLUE);
+  shapeArray = generateL(BLUE);
+  shapeArray = generateL_reverse(BLUE);
+  shapeArray = generateT(BLUE);
+  shapeArray = generateBox(BLUE);
+  // int shapeArrayLen = sizeof(shapeArray) / sizeof(int);
+  int arrSize = 4;
+  // for (int i = 0; i < arrSize; i++) {
+  //   Serial.print(shapeArray[i]);
+  //   Serial.print(" ");
+  // }
+  // Serial.println();
+
+  // for (int i = 0; i < 30; i++) {
+  //   shapeArray = drop(shapeArray, 4, strip.Color(0, 255, 0));
+  //   delay(1000);
+  // }
+  
   // chase(strip.Color(0, 255, 0)); // Green
   // chase(strip.Color(0, 0, 255)); // Blue
-
   // colorWipe(strip.Color(255, 0, 0), 50);      // Red
-//   colorWipe(strip.Color(0, 255, 0), 50);      // Green
-//   colorWipe(strip.Color(0, 0, 255), 50);      // Blue
+  // colorWipe(strip.Color(0, 255, 0), 50);      // Green
+  // colorWipe(strip.Color(0, 0, 255), 50);      // Blue
 
   // Send a theater pixel chase in...
   // theaterChase(strip.Color(255, 255, 255), 50);     // White
 
   // rainbow(1);
   
-  // strip.setPixelColor(0, strip.Color(255, 0, 0));
-  // strip.show();
-  // Serial.println("showing red.");
-  // delay(10000);
+  delay(2000);
 }
 
-static void chase(uint32_t c) {
+void turn_on_idxs(int* idxs, int idxs_size, uint32_t color) {
+  for (int i = 0; i < idxs_size; i++) {
+    int* rc = pos_to_idx(idxs[i]);
+    int r = rc[0], c = rc[1];
+    strip.setPixelColor(LED_INDEXING[r][c], color);
+  }
+  strip.show();
+}
+
+void turn_off_idxs(int* idxs, int idxs_size) {
+  for (int i = 0; i < idxs_size; i++) {
+    int* rc = pos_to_idx(idxs[i]);
+    int r = rc[0], c = rc[1];
+    strip.setPixelColor(LED_INDEXING[r][c], 0);
+  }
+  strip.show();
+}
+
+int* generateLine(uint32_t color) {
+  int* idxs = new int[4]{6, 7, 8, 9};
+  int idxs_size = 4;
+  
+  turn_on_idxs(idxs, idxs_size, color);
+  delay(1000);
+  turn_off_idxs(idxs, idxs_size);
+  
+  return idxs;
+}
+
+int* generateZ(uint32_t color) {
+  int* idxs = new int[4] {6, 7, 23, 24};
+  int idxs_size = 4;
+  
+  turn_on_idxs(idxs, idxs_size, color);
+  delay(1000);
+  turn_off_idxs(idxs, idxs_size);
+
+  return idxs;
+}
+
+int* generateZ_reverse(uint32_t color) {
+  int* idxs = new int[4] {22, 23, 7, 8};
+  int idxs_size = 4;
+  
+  turn_on_idxs(idxs, idxs_size, color);
+  delay(1000);
+  turn_off_idxs(idxs, idxs_size);
+
+  return idxs;
+}
+
+int* generateL(uint32_t color) {
+  int* idxs = new int[4] {5, 21, 22, 23};
+  int idxs_size = 4;
+  
+  turn_on_idxs(idxs, idxs_size, color);
+  delay(1000);
+  turn_off_idxs(idxs, idxs_size);
+
+  return idxs;
+}
+
+int* generateL_reverse(uint32_t color) {
+  int* idxs = new int[4] {20, 21, 22, 6};
+  int idxs_size = 4;
+  
+  turn_on_idxs(idxs, idxs_size, color);
+  delay(1000);
+  turn_off_idxs(idxs, idxs_size);
+
+  return idxs;
+}
+
+int* generateT(uint32_t color) {
+  int* idxs = new int[4] {7, 22, 23, 24};
+  int idxs_size = 4;
+  
+  turn_on_idxs(idxs, idxs_size, color);
+  delay(1000);
+  turn_off_idxs(idxs, idxs_size);
+
+  return idxs;
+}
+
+int* generateBox(uint32_t color) {
+  int* idxs = new int[4] {7, 8, 23, 24};
+  int idxs_size = 4;
+  
+  turn_on_idxs(idxs, idxs_size, color);
+  delay(1000);
+  turn_off_idxs(idxs, idxs_size);
+
+  return idxs;
+}
+
+int* drop(int* shape, int size, uint32_t c) {
+  for (int i = 0; i < size; i++) {
+    int row = (shape[i] % NUM_LEDS) / NUM_COLS;
+    int col = (shape[i] % NUM_LEDS) % NUM_COLS;
+    int newRow = row + 1;
+    strip.setPixelColor(LED_INDEXING[newRow][col], c);
+    strip.setPixelColor(LED_INDEXING[row][col], 0);
+    strip.show();
+    shape[i] += 16;
+  }
+  return shape;
+}
+
+
+
+// other methods
+void chase(uint32_t c) {
   Serial.println("chasing!");
   for(uint16_t i = 0; i < strip.numPixels(); i++) {
     int row = (i % NUM_LEDS) / NUM_COLS;
@@ -136,17 +277,17 @@ void colorWipe(uint32_t c, uint8_t wait) {
   }
 }
 
-// void rainbow(uint8_t wait) {
-//   for(int j=0; j<1000; j++) 
-//   {
-//     for(int i=0; i<strip.numPixels(); i++) 
-//     {
-//       strip.setPixelColor(i, Wheel((i+j) & 255));
-//     }
-//     strip.show();
-//     delay(wait);
-//   }
-// }
+void rainbow(uint8_t wait) {
+  for(int j=0; j<1000; j++) 
+  {
+    for(int i=0; i<strip.numPixels(); i++) 
+    {
+      strip.setPixelColor(i, Wheel((i+j) & 255));
+    }
+    strip.show();
+    delay(wait);
+  }
+}
 
 // Theatre-style crawling lights.
 void theaterChase(uint32_t c, uint8_t wait) {
@@ -166,16 +307,16 @@ void theaterChase(uint32_t c, uint8_t wait) {
   }
 }
 
-// // Input a value 0 to 255 to get a color value.
-// // The colours are a transition r - g - b - back to r.
-// uint32_t Wheel(byte WheelPos) {
-//   if(WheelPos < 85) {
-//    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-//   } else if(WheelPos < 170) {
-//    WheelPos -= 85;
-//    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-//   } else {
-//    WheelPos -= 170;
-//    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-//   }
-// }
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  if(WheelPos < 85) {
+   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  } else if(WheelPos < 170) {
+   WheelPos -= 85;
+   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } else {
+   WheelPos -= 170;
+   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+}
