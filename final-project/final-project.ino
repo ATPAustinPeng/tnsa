@@ -1,23 +1,12 @@
-// Simple NeoPixel test.  Lights just a few pixels at a time so a
-// 1m strip can safely be powered from Arduino 5V pin.  Arduino
-// may nonetheless hiccup when LEDs are first connected and not
-// accept code.  So upload code first, unplug USB, connect pixels
-// to GND FIRST, then +5V and digital pin 6, then re-plug USB.
-// A working strip will show a few pixels moving down the line,
-// cycling between red, green and blue.  If you get no response,
-// might be connected to wrong end of strip (the end wires, if
-// any, are no indication -- look instead for the data direction
-// arrows printed on the strip).
-
 #include <Adafruit_NeoPixel.h>
 
 #define PIN 6
-#define N_LEDS 512
+#define NUM_LEDS 512
 #define NUM_ROWS 32
 #define NUM_COLS 16
-#define BRIGHTNESS 8       // to reduce current for 256 NeoPixels
+#define BRIGHTNESS 8 // to reduce current for 256 NeoPixels
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(N_LEDS, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 int LED_INDEXING[32][16];
 
 void create_led_indexing() {
@@ -73,6 +62,23 @@ void create_led_indexing() {
   }
 }
 
+void print_led_indexing() {
+  // Determine the number of rows and columns in the array
+  int numRows = sizeof(LED_INDEXING) / sizeof(LED_INDEXING[0]);
+  int numCols = sizeof(LED_INDEXING[0]) / sizeof(LED_INDEXING[0][0]);
+
+  // Iterate over the array using the determined ranges
+  for (int i = 0; i < numRows; i++) {
+    for (int j = 0; j < numCols; j++) {
+      // Access the element at row i and column j
+      int element = LED_INDEXING[i][j];
+      Serial.print(element);
+      Serial.print(",");
+    }
+    Serial.println();
+  }
+}
+
 
 void setup() {
   Serial.begin(9600);
@@ -83,22 +89,6 @@ void setup() {
 }
 
 void loop() {
-  // // Serial.println("test");
-  // // Determine the number of rows and columns in the array
-  // int numRows = sizeof(LED_INDEXING) / sizeof(LED_INDEXING[0]);
-  // int numCols = sizeof(LED_INDEXING[0]) / sizeof(LED_INDEXING[0][0]);
-
-  // // Iterate over the array using the determined ranges
-  // for (int i = 0; i < numRows; i++) {
-  //   for (int j = 0; j < numCols; j++) {
-  //     // Access the element at row i and column j
-  //     int element = LED_INDEXING[i][j];
-  //     Serial.print(element);
-  //     Serial.print(",");
-  //   }
-  //   Serial.println();
-  // }
-
   chase(strip.Color(255, 0, 0)); // Red
   // chase(strip.Color(0, 255, 0)); // Green
   // chase(strip.Color(0, 0, 255)); // Blue
@@ -121,24 +111,16 @@ void loop() {
 static void chase(uint32_t c) {
   Serial.println("chasing!");
   for(uint16_t i = 0; i < strip.numPixels(); i++) {
-    int row = (i % N_LEDS) / NUM_COLS;
-    int col = (i % N_LEDS) % NUM_COLS;
-    Serial.print("lighting up this: ");
-    Serial.print(row);
-    Serial.print(" ");
-    Serial.println(col);
-
+    int row = (i % NUM_LEDS) / NUM_COLS;
+    int col = (i % NUM_LEDS) % NUM_COLS;
     int eraseRow = (i - 4) / NUM_COLS;
     int eraseCol = (i - 4) % NUM_COLS;
+
     if (i < 4) {
-      eraseRow = (i + N_LEDS - 4) / NUM_COLS;
-      eraseCol = (i + N_LEDS - 4) % NUM_COLS;      
+      eraseRow = (i + NUM_LEDS - 4) / NUM_COLS;
+      eraseCol = (i + NUM_LEDS - 4) % NUM_COLS;      
     }
 
-    Serial.print("erasing this: ");
-    Serial.print(eraseRow);
-    Serial.print(" ");
-    Serial.println(eraseCol);
     strip.setPixelColor(LED_INDEXING[row][col], c); // Draw new pixel
     strip.setPixelColor(LED_INDEXING[eraseRow][eraseCol], 0); // Erase pixel a few steps back
     strip.show();
