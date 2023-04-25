@@ -7,12 +7,26 @@
 #define BRIGHTNESS 8 // to reduce current for 256 NeoPixels
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
-int LED_INDEXING[32][16];
+int LED_INDEXING[NUM_ROWS][NUM_COLS];
+int OCCUPIED[NUM_ROWS][NUM_COLS];
+int TESTING = false;
+int SHAPE_SIZE = 4;
 
 // commonly used colors
 uint32_t RED = strip.Color(255, 0, 0);
 uint32_t GREEN = strip.Color(0, 255, 0);
 uint32_t BLUE = strip.Color(0, 0, 255);
+
+// declaring generating function prototypes
+int* genI();
+int* genZ();
+int* genS();
+int* genJ();
+int* genL();
+int* genT();
+int* genO();
+
+// Note: WE IMPLEMENT THE NINTENDO ROTATION SYSTEM
 
 void create_led_indexing() {
   int leds_per_strip = 256;
@@ -85,7 +99,7 @@ void print_led_indexing() {
 }
 
 // given the wack position in array (ex. value from 0 to 511)
-// convert the value to the actual position to light up (following array indexing)
+// convert the value to the actual position (row, col) to light up using array indexing
 int* pos_to_idx(int pos) {
   int row = (pos % NUM_LEDS) / NUM_COLS;
   int col = (pos % NUM_LEDS) % NUM_COLS;
@@ -103,21 +117,10 @@ void setup() {
 void loop() {
   // chase(strip.Color(255, 0, 0)); // Red
   // strip.setPixelColor(LED_INDEXING[0][6], strip.Color(0, 255, 0));
+  // strip.show();
 
-  int* shapeArray = generateLine(GREEN);
-  shapeArray = generateZ(BLUE);
-  shapeArray = generateZ_reverse(BLUE);
-  shapeArray = generateL(BLUE);
-  shapeArray = generateL_reverse(BLUE);
-  shapeArray = generateT(BLUE);
-  shapeArray = generateBox(BLUE);
-  // int shapeArrayLen = sizeof(shapeArray) / sizeof(int);
-  int arrSize = 4;
-  // for (int i = 0; i < arrSize; i++) {
-  //   Serial.print(shapeArray[i]);
-  //   Serial.print(" ");
-  // }
-  // Serial.println();
+  generate(BLUE);
+  // int* shape_idxs = genI();
 
   // for (int i = 0; i < 30; i++) {
   //   shapeArray = drop(shapeArray, 4, strip.Color(0, 255, 0));
@@ -135,12 +138,36 @@ void loop() {
 
   // rainbow(1);
   
+  // strip.clear();
   delay(2000);
 }
 
-void turn_on_idxs(int* idxs, int idxs_size, uint32_t color) {
+void generate(uint32_t color) {
+  int* (*generateFuncs[])() = {genI, genZ, genS, genJ, genL, genT, genO};
+  int generateFuncs_size = 7;
+
+  int randIdx = random(7);
+  Serial.println(randIdx);
+  int* shape_idxs = generateFuncs[randIdx]();
+  turn_on_idxs(shape_idxs, SHAPE_SIZE, BLUE);
+  delay(1500);
+  turn_off_idxs(shape_idxs, SHAPE_SIZE);
+  delay(1500);
+
+  // int* idxs;
+  // for (int i = 0; i < generateFuncs_size; i++) {
+  //   Serial.println(i);
+  //   int* shape_idxs = generateFuncs[i]();
+  //   turn_on_idxs(shape_idxs, SHAPE_SIZE, BLUE);
+  //   delay(1500);
+  //   turn_off_idxs(shape_idxs, SHAPE_SIZE);
+  //   delay(1500);
+  // }
+}
+
+void turn_on_idxs(int* shape_idxs, int idxs_size, uint32_t color) {
   for (int i = 0; i < idxs_size; i++) {
-    int* rc = pos_to_idx(idxs[i]);
+    int* rc = pos_to_idx(shape_idxs[i]);
     int r = rc[0], c = rc[1];
     strip.setPixelColor(LED_INDEXING[r][c], color);
   }
@@ -156,97 +183,40 @@ void turn_off_idxs(int* idxs, int idxs_size) {
   strip.show();
 }
 
-int* generateLine(uint32_t color) {
-  int* idxs = new int[4]{6, 7, 8, 9};
-  int idxs_size = 4;
-  
-  turn_on_idxs(idxs, idxs_size, color);
-  delay(1000);
-  turn_off_idxs(idxs, idxs_size);
-  
+int* genI() {
+  int* idxs = new int[4] {0, 1, 2, 3};
   return idxs;
 }
 
-int* generateZ(uint32_t color) {
-  int* idxs = new int[4] {6, 7, 23, 24};
-  int idxs_size = 4;
-  
-  turn_on_idxs(idxs, idxs_size, color);
-  delay(1000);
-  turn_off_idxs(idxs, idxs_size);
-
+int* genZ() {
+  int* idxs = new int[4] {0, 1, 17, 18};
   return idxs;
 }
 
-int* generateZ_reverse(uint32_t color) {
-  int* idxs = new int[4] {22, 23, 7, 8};
-  int idxs_size = 4;
-  
-  turn_on_idxs(idxs, idxs_size, color);
-  delay(1000);
-  turn_off_idxs(idxs, idxs_size);
-
+int* genS() {
+  int* idxs = new int[4] {1, 2, 16, 17};
   return idxs;
 }
 
-int* generateL(uint32_t color) {
-  int* idxs = new int[4] {5, 21, 22, 23};
-  int idxs_size = 4;
-  
-  turn_on_idxs(idxs, idxs_size, color);
-  delay(1000);
-  turn_off_idxs(idxs, idxs_size);
-
+int* genJ() {
+  int* idxs = new int[4] {0, 16, 17, 18};
   return idxs;
 }
 
-int* generateL_reverse(uint32_t color) {
-  int* idxs = new int[4] {20, 21, 22, 6};
-  int idxs_size = 4;
-  
-  turn_on_idxs(idxs, idxs_size, color);
-  delay(1000);
-  turn_off_idxs(idxs, idxs_size);
-
+int* genL() {
+  int* idxs = new int[4] {2, 16, 17, 18};
   return idxs;
 }
 
-int* generateT(uint32_t color) {
-  int* idxs = new int[4] {7, 22, 23, 24};
-  int idxs_size = 4;
-  
-  turn_on_idxs(idxs, idxs_size, color);
-  delay(1000);
-  turn_off_idxs(idxs, idxs_size);
-
+int* genT() {
+  int* idxs = new int[4] {1, 16, 17, 18};
   return idxs;
 }
 
-int* generateBox(uint32_t color) {
-  int* idxs = new int[4] {7, 8, 23, 24};
-  int idxs_size = 4;
-  
-  turn_on_idxs(idxs, idxs_size, color);
-  delay(1000);
-  turn_off_idxs(idxs, idxs_size);
-
+int* genO() {
+  int* idxs = new int[4] {0, 1, 16, 17};
   return idxs;
 }
-
-int* drop(int* shape, int size, uint32_t c) {
-  for (int i = 0; i < size; i++) {
-    int row = (shape[i] % NUM_LEDS) / NUM_COLS;
-    int col = (shape[i] % NUM_LEDS) % NUM_COLS;
-    int newRow = row + 1;
-    strip.setPixelColor(LED_INDEXING[newRow][col], c);
-    strip.setPixelColor(LED_INDEXING[row][col], 0);
-    strip.show();
-    shape[i] += 16;
-  }
-  return shape;
-}
-
-
 
 // other methods
 void chase(uint32_t c) {
