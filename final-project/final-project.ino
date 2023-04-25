@@ -119,13 +119,11 @@ void loop() {
   // strip.setPixelColor(LED_INDEXING[0][6], strip.Color(0, 255, 0));
   // strip.show();
 
-  generate(BLUE);
+  // generate(BLUE);
   // int* shape_idxs = genI();
 
-  // for (int i = 0; i < 30; i++) {
-  //   shapeArray = drop(shapeArray, 4, strip.Color(0, 255, 0));
-  //   delay(1000);
-  // }
+  int* shapeArray = genI();
+  drop(shapeArray, 4, GREEN);
   
   // chase(strip.Color(0, 255, 0)); // Green
   // chase(strip.Color(0, 0, 255)); // Blue
@@ -139,7 +137,7 @@ void loop() {
   // rainbow(1);
   
   // strip.clear();
-  delay(2000);
+  delay(500);
 }
 
 void generate(uint32_t color) {
@@ -181,6 +179,61 @@ void turn_off_idxs(int* idxs, int idxs_size) {
     strip.setPixelColor(LED_INDEXING[r][c], 0);
   }
   strip.show();
+}
+
+int* getNextPos(int* pos, int size) {
+  int* newPos = new int[size];
+  for (int i = 0; i < size; i++) {
+    newPos[i] = pos[i] + 16;
+  }
+  return newPos;
+}
+
+bool isCollision(int* pos, int size) {
+  bool collide = false;
+  for (int i = 0; i < size; i++) {
+    if (pos[i] >= 512) {
+      collide = true;
+      break;
+    }
+    int* rc = pos_to_idx(pos[i]);
+    int row = rc[0], col = rc[1];
+    if (OCCUPIED[row][col] == 1) {
+      collide = true;
+    }
+    else if (row >= NUM_ROWS) {
+      collide = true;
+    }
+  }
+  return collide;
+}
+
+void drop(int* shape, int size, uint32_t color) {
+  while (true) {
+    int* nextPos = getNextPos(shape, size);
+    if (isCollision(nextPos, size)) {
+      for (int i = 0; i < size; i++) {
+        int* rc = pos_to_idx(shape[i]);
+        int row = rc[0], col = rc[1];
+        int pr = row - 1;
+        strip.setPixelColor(LED_INDEXING[row][col], color);
+        strip.setPixelColor(LED_INDEXING[pr][col], 0);
+        OCCUPIED[row][col] = 1;
+      }
+      break;
+    } else {
+      for (int i = 0; i < size; i++) {
+        int* rc = pos_to_idx(shape[i]);
+        int row = rc[0], col = rc[1];
+        int pr = row - 1;
+        strip.setPixelColor(LED_INDEXING[row][col], color);
+        strip.setPixelColor(LED_INDEXING[pr][col], 0);
+        shape[i] += 16;
+      }      
+    }
+    strip.show();
+    delay(100);
+  }
 }
 
 int* genI() {
