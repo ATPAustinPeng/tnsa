@@ -19,6 +19,7 @@
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(N_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 int LED_INDEXING[32][16];
+bool occupied[32][16];
 
 void create_led_indexing() {
   int leds_per_strip = 256;
@@ -99,7 +100,15 @@ void loop() {
   //   Serial.println();
   // }
 
-  chase(strip.Color(255, 0, 0)); // Red
+  // chase(strip.Color(255, 0, 0)); // Red
+  // strip.setPixelColor(LED_INDEXING[0][6], strip.Color(0, 255, 0));
+  int* shapeArray = generateLine(strip.Color(0, 255, 0));
+  for (int i = 0; i < 10; i++) {
+    shapeArray = drop(shapeArray, 4, strip.Color(0, 255, 0));
+    Serial.println(shapeArray[0]);
+    delay(1000);
+  }
+  
   // chase(strip.Color(0, 255, 0)); // Green
   // chase(strip.Color(0, 0, 255)); // Blue
 
@@ -152,6 +161,28 @@ void colorWipe(uint32_t c, uint8_t wait) {
     strip.show();
     delay(wait);
   }
+}
+
+int* generateLine(uint32_t c) {
+  strip.setPixelColor(LED_INDEXING[0][6], c);
+  strip.setPixelColor(LED_INDEXING[0][7], c);
+  strip.setPixelColor(LED_INDEXING[0][8], c);
+  strip.setPixelColor(LED_INDEXING[0][9], c);
+  int indexes[4] = {6,7,8,9};
+  return indexes;
+}
+
+int* drop(int shape[], int size, uint32_t c){
+  int newArray[size];
+  for (int i = 0; i < size; i++) {
+    int row = (shape[i] % N_LEDS) / NUM_COLS;
+    int col = (shape[i] % N_LEDS) % NUM_COLS;
+    int newRow = row + 1;
+    strip.setPixelColor(LED_INDEXING[newRow][col], c);
+    strip.setPixelColor(LED_INDEXING[row][col], 0);
+    newArray[i] = shape[i]+16;
+  }
+  return newArray;
 }
 
 // void rainbow(uint8_t wait) {
