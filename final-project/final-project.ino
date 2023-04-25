@@ -110,7 +110,7 @@ void loop() {
   // strip.setPixelColor(LED_INDEXING[0][6], strip.Color(0, 255, 0));
 
   int* shapeArray = generateLine(GREEN);
-  drop(getNextPos(shapeArray, 4), 4, GREEN);
+  drop(shapeArray, 4, GREEN);
 
 
   // shapeArray = generateZ(BLUE);
@@ -149,7 +149,7 @@ void loop() {
 
   // rainbow(1);
   
-  delay(2000);
+  delay(500);
 }
 
 void turn_on_idxs(int* idxs, int idxs_size, uint32_t color) {
@@ -248,21 +248,26 @@ int* generateBox(uint32_t color) {
 }
 
 int* getNextPos(int* pos, int size) {
+  int* newPos = new int[size];
   for (int i = 0; i < size; i++) {
-    pos[i] += 16;
+    newPos[i] = pos[i] + 16;
   }
-  return pos;
+  return newPos;
 }
 
 bool isCollision(int* pos, int size) {
   bool collide = false;
   for (int i = 0; i < size; i++) {
+    if (pos[i] >= 512) {
+      collide = true;
+      break;
+    }
     int* rc = pos_to_idx(pos[i]);
     int row = rc[0], col = rc[1];
     if (occupied[row][col] == 1) {
       collide = true;
     }
-    else if (row == NUM_ROWS - 1) {
+    else if (row >= NUM_ROWS) {
       collide = true;
     }
   }
@@ -276,10 +281,11 @@ void drop(int* shape, int size, uint32_t c) {
   //     Serial.print(" ");
   //   }
   //   Serial.println(" ");
-  // }
+  // }  
   while (true) {
+    int* nextPos = getNextPos(shape, size);
     // bool collide = 
-    if (isCollision(shape, size)) {
+    if (isCollision(nextPos, size)) {
       for (int i = 0; i < size; i++) {
         int* rc = pos_to_idx(shape[i]);
         int row = rc[0], col = rc[1];
@@ -303,15 +309,14 @@ void drop(int* shape, int size, uint32_t c) {
       }      
     }
   }
-  Serial.println("out of loop");
+  // Serial.println("out of loop");
 
-  for (int i = 0; i < 33; i++) {
-    for (int j = 0; j < 16; j++) {
-      Serial.print(occupied[i][j]);
-      Serial.print(",");
-    }
-    Serial.println();
-  }
+  // for (int i = 0; i < 33; i++) {
+  //   for (int j = 0; j < 16; j++) {
+  //     Serial.print(occupied[i][j]);
+  //     Serial.print(",");
+  //   }
+  //   Serial.println();
 }
 
 
