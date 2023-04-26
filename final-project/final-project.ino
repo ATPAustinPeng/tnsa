@@ -13,7 +13,9 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800)
 int LED_INDEXING[NUM_ROWS][NUM_COLS];
 int OCCUPIED[NUM_ROWS][NUM_COLS];
 int TESTING = false;
-int SHAPE_SIZE = 4;
+int SHAPE_SIZE = 6;
+int RIGHT_ROTATE = 1;
+int LEFT_ROTATE = 2;
 
 // commonly used colors
 uint32_t RED = strip.Color(255, 0, 0);
@@ -133,25 +135,25 @@ void loop() {
   // Serial.println(free_memory);
 
   int* shapeArray = genI();
-  drop(shapeArray, 4, RED);
+  drop(shapeArray, SHAPE_SIZE, RED);
 
-  // shapeArray = genZ();
-  // drop(shapeArray, 4, GREEN);
+  shapeArray = genZ();
+  drop(shapeArray, SHAPE_SIZE, GREEN);
 
-  // shapeArray = genS();
-  // drop(shapeArray, 4, BLUE);
+  shapeArray = genS();
+  drop(shapeArray, SHAPE_SIZE, BLUE);
   
-  // shapeArray = genJ();
-  // drop(shapeArray, 4, RED);
+  shapeArray = genJ();
+  drop(shapeArray, SHAPE_SIZE, RED);
 
-  // shapeArray = genL();
-  // drop(shapeArray, 4, GREEN);
+  shapeArray = genL();
+  drop(shapeArray, SHAPE_SIZE, GREEN);
 
-  // shapeArray = genT();
-  // drop(shapeArray, 4, BLUE);
+  shapeArray = genT();
+  drop(shapeArray, SHAPE_SIZE, BLUE);
 
-  // shapeArray = genO();
-  // drop(shapeArray, 4, RED);
+  shapeArray = genO();
+  drop(shapeArray, SHAPE_SIZE, RED);
 
   delete[] shapeArray;
 
@@ -184,7 +186,7 @@ void loop() {
 // }
 
 void turn_on_idxs(int* shape_idxs, int idxs_size, uint32_t color) {
-  for (int i = 0; i < idxs_size; i++) {
+  for (int i = 2; i < idxs_size; i++) {
     int* rc = pos_to_idx(shape_idxs[i]);
     int r = rc[0], c = rc[1];
     strip.setPixelColor(LED_INDEXING[r][c], color);
@@ -194,7 +196,7 @@ void turn_on_idxs(int* shape_idxs, int idxs_size, uint32_t color) {
 }
 
 void turn_off_idxs(int* idxs, int idxs_size) {
-  for (int i = 0; i < idxs_size; i++) {
+  for (int i = 2; i < idxs_size; i++) {
     int* rc = pos_to_idx(idxs[i]);
     int r = rc[0], c = rc[1];
     strip.setPixelColor(LED_INDEXING[r][c], 0);
@@ -203,16 +205,32 @@ void turn_off_idxs(int* idxs, int idxs_size) {
   strip.show();
 }
 
-int* getNextPos(int* pos, int size) {
+int* getNextDownPos(int* pos, int size) {
   int* newPos = new int[size];
-  for (int i = 0; i < size; i++) {
+  for (int i = 2; i < size; i++) {
     newPos[i] = pos[i] + 16;
   }
   return newPos;
 }
 
+int* getNextLeftPos(int* pos, int size) {
+  int* newPos = new int[size];
+  for (int i = 2; i < size; i++) {
+    newPos[i] = pos[i] - 1;
+  }
+  return newPos;
+}
+
+int* getNextRightPos(int* pos, int size) {
+  int* newPos = new int[size];
+  for (int i = 2; i < size; i++) {
+    newPos[i] = pos[i] + 1;
+  }
+  return newPos;
+}
+
 bool isNextACollision(int* pos, int size) {
-  for (int i = size - 1; i >= 0; i--) {
+  for (int i = size - 1; i >= 2; i--) {
     int* rc = pos_to_idx(pos[i]);
     int row = rc[0], col = rc[1];
     delete[] rc;
@@ -227,13 +245,50 @@ bool isNextACollision(int* pos, int size) {
   return false;
 }
 
+bool wallCollisionLeft(int* pos, int size) {
+  for (int i = 2; i < size; i++) {
+    int* rc = pos_to_idx(pos[i]);
+    int row = rc[0], col = rc[1];
+    delete[] rc;
+    if (OCCUPIED[row][col] == 1) {
+      // Serial.println("hit another block");
+      return true;
+    } else if(col % 16 == 15) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool wallCollisionRight(int* pos, int size) {
+  for (int i = 2; i < size; i++) {
+    int* rc = pos_to_idx(pos[i]);
+    int row = rc[0], col = rc[1];
+    delete[] rc;
+    if (OCCUPIED[row][col] == 1) {
+      // Serial.println("hit another block");
+      return true;
+    } else if(col % 16 == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool isTogether(int* pos, int size) {
+
+}
+
 void drop(int* curr_idxs, int size, uint32_t color) {
   while (true) {
-    int* next_idxs = getNextPos(curr_idxs, size);
+    // moveRight(curr_idxs, size, color);
+    // moveLeft(curr_idxs, size, color);
+    rotate(curr_idxs, size, color, RIGHT_ROTATE);
+    int* next_idxs = getNextDownPos(curr_idxs, size);
 
     bool isCollision = isNextACollision(next_idxs, size);
     if (isCollision) { // if moving results in collision, don't move, set OCCUPIED with current locations
-      for (int i = 0; i < size; i++) {
+      for (int i = 2; i < size; i++) {
         int* rc = pos_to_idx(curr_idxs[i]);
         int row = rc[0], col = rc[1];
         delete[] rc;
@@ -245,9 +300,9 @@ void drop(int* curr_idxs, int size, uint32_t color) {
       turn_on_idxs(next_idxs, SHAPE_SIZE, color);
     }
     
-    strip.show();
+    // strip.show(); //extra????
     
-    for (int i = 0; i < SHAPE_SIZE; i++) {
+    for (int i = 2; i < SHAPE_SIZE; i++) {
       curr_idxs[i] = next_idxs[i];
     }
     delete[] next_idxs;
@@ -255,38 +310,334 @@ void drop(int* curr_idxs, int size, uint32_t color) {
   }
 }
 
+void moveLeft(int* curr_idxs, int size, uint32_t color) {
+  int* next_idxs = getNextLeftPos(curr_idxs, size);
+  bool isCollision = wallCollisionLeft(next_idxs, size);
+  if (!isCollision) {
+    turn_off_idxs(curr_idxs, SHAPE_SIZE);
+    turn_on_idxs(next_idxs, SHAPE_SIZE, color);
+    for (int i = 2; i < SHAPE_SIZE; i++) {
+      curr_idxs[i] = next_idxs[i];
+    }
+  }
+  delete[] next_idxs;
+}
+
+void moveRight(int* curr_idxs, int size, uint32_t color) {
+  int* next_idxs = getNextRightPos(curr_idxs, size);
+  bool isCollision = wallCollisionRight(next_idxs, size);
+  if (!isCollision) {
+    turn_off_idxs(curr_idxs, SHAPE_SIZE);
+    turn_on_idxs(next_idxs, SHAPE_SIZE, color);
+    for (int i = 2; i < SHAPE_SIZE; i++) {
+      curr_idxs[i] = next_idxs[i];
+    }
+  }
+  delete[] next_idxs;
+}
+
+void rotate(int* curr_idxs, int size, uint32_t color, int dir) {
+  int* next_idxs = new int[size];
+  if (curr_idxs[0] == 1) {
+    next_idxs = getIRotatePos(curr_idxs, size, dir);
+  } else if (curr_idxs[0] == 2) {
+    next_idxs = getJRotatePos(curr_idxs, size, dir);
+  } else if (curr_idxs[0] == 3) {
+    next_idxs = getLRotatePos(curr_idxs, size, dir);
+  } else if (curr_idxs[0] == 4) {
+    next_idxs = getSRotatePos(curr_idxs, size, dir);
+  } else if (curr_idxs[0] == 5) {
+    next_idxs = getTRotatePos(curr_idxs, size, dir);
+  } else if (curr_idxs[0] == 6) {
+    next_idxs = getZRotatePos(curr_idxs, size, dir);
+  } else {
+    next_idxs = getORotatePos(curr_idxs, size, dir);
+  }
+  bool isCollision = isNextACollision(next_idxs, size);
+  if (!isCollision) {
+    turn_off_idxs(curr_idxs, SHAPE_SIZE);
+    turn_on_idxs(next_idxs, SHAPE_SIZE, color);
+    for (int i = 0; i < SHAPE_SIZE; i++) {
+      curr_idxs[i] = next_idxs[i];
+    }
+  }
+  delete[] next_idxs;
+}
+
+int* getIRotatePos(int* pos, int size, int dir) {
+  int* nPos = new int[size];
+  nPos[0] = pos[0];
+  if (pos[1] == 1) {
+    nPos[1] = 2; //change state variable    
+    nPos[2] = pos[2] - 30;
+    nPos[3] = pos[3] - 15;
+    nPos[4] = pos[4];
+    nPos[5] = pos[5] + 15;
+  } else {
+    nPos[1] = 1; //change state variable
+    nPos[2] = pos[2] + 30;
+    nPos[3] = pos[3] + 15;
+    nPos[4] = pos[4];
+    nPos[5] = pos[5] - 15;
+  }
+  return nPos;
+}
+
+int* getJRotatePos(int* pos, int size, int dir) {
+  int* nPos = new int[size];
+  nPos[0] = pos[0];
+  if (dir == RIGHT_ROTATE) {
+    if (pos[1] == 1) {
+      nPos[1] = 2;
+      nPos[2] = pos[2] - 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 15;
+      nPos[5] = pos[5] - 2;
+    } else if (pos[1] == 2) {
+      nPos[1] = 3;
+      nPos[2] = pos[2] + 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 17;
+      nPos[5] = pos[5] - 32;
+    } else if (pos[1] == 3) {
+      nPos[1] = 4;
+      nPos[2] = pos[2] + 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 15;
+      nPos[5] = pos[5] + 2;
+    } else {
+      nPos[1] = 1;
+      nPos[2] = pos[2] - 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 17;
+      nPos[5] = pos[5] + 32;
+    }
+  } else {
+    if (pos[1] == 1) {
+      nPos[1] = 4;
+      nPos[2] = pos[2] + 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 17;
+      nPos[5] = pos[5] - 32;
+    } else if (pos[1] == 2) {
+      nPos[1] = 1;
+      nPos[2] = pos[2] + 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 15;
+      nPos[5] = pos[5] + 2;
+    } else if (pos[1] == 3) {
+      nPos[1] = 2;
+      nPos[2] = pos[2] - 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 17;
+      nPos[5] = pos[5] + 32;
+    } else {
+      nPos[1] = 3;
+      nPos[2] = pos[2] - 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 15;
+      nPos[5] = pos[5] - 2;
+    }
+  }
+  return nPos;
+}
+
+int* getLRotatePos(int* pos, int size, int dir) {
+  int* nPos = new int[size];
+  nPos[0] = pos[0];
+  if (dir == RIGHT_ROTATE) {
+    if (pos[1] == 1) {
+      nPos[1] = 2;
+      nPos[2] = pos[2] + 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 15;
+      nPos[5] = pos[5] - 32;
+    } else if (pos[1] == 2) {
+      nPos[1] = 3;
+      nPos[2] = pos[2] - 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 17;
+      nPos[5] = pos[5] + 2;
+    } else if (pos[1] == 3) {
+      nPos[1] = 4;
+      nPos[2] = pos[2] - 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 15;
+      nPos[5] = pos[5] + 32;
+    } else {
+      nPos[1] = 1;
+      nPos[2] = pos[2] + 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 17;
+      nPos[5] = pos[5] - 2;
+    }
+  } else {
+    if (pos[1] == 1) {
+      nPos[1] = 4;
+      nPos[2] = pos[2] - 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 17;
+      nPos[5] = pos[5] + 2;
+    } else if (pos[1] == 2) {
+      nPos[1] = 1;
+      nPos[2] = pos[2] - 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 15;
+      nPos[5] = pos[5] + 32;
+    } else if (pos[1] == 3) {
+      nPos[1] = 2;
+      nPos[2] = pos[2] + 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 17;
+      nPos[5] = pos[5] - 2;
+    } else {
+      nPos[1] = 3;
+      nPos[2] = pos[2] + 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 15;
+      nPos[5] = pos[5] - 32;
+    }
+  }
+  return nPos;
+}
+
+int* getSRotatePos(int* pos, int size, int dir) {
+  int* nPos = new int[size];
+  nPos[0] = pos[0];
+  if (pos[1] == 1) {
+    nPos[1] = 2; //change state variable    
+    nPos[2] = pos[2] - 31;
+    nPos[3] = pos[3] - 16;
+    nPos[4] = pos[4] + 1;
+    nPos[5] = pos[5] + 16;
+  } else {
+    nPos[1] = 1; //change state variable
+    nPos[2] = pos[2] + 31;
+    nPos[3] = pos[3] + 16;
+    nPos[4] = pos[4] - 1;
+    nPos[5] = pos[5] - 16;
+  }  
+  return nPos;
+}
+
+int* getTRotatePos(int* pos, int size, int dir) {
+  int* nPos = new int[size];
+  nPos[0] = pos[0];
+  if (dir == RIGHT_ROTATE) {
+    if (pos[1] == 1) {
+      nPos[1] = 2;
+      nPos[2] = pos[2] - 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 15;
+      nPos[5] = pos[5] - 17;
+    } else if (pos[1] == 2) {
+      nPos[1] = 3;
+      nPos[2] = pos[2] + 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 17;
+      nPos[5] = pos[5] - 15;
+    } else if (pos[1] == 3) {
+      nPos[1] = 4;
+      nPos[2] = pos[2] + 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 15;
+      nPos[5] = pos[5] + 17;
+    } else {
+      nPos[1] = 1;
+      nPos[2] = pos[2] - 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 17;
+      nPos[5] = pos[5] + 15;
+    }
+  } else {
+    if (pos[1] == 1) {
+      nPos[1] = 4;
+      nPos[2] = pos[2] + 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 17;
+      nPos[5] = pos[5] - 15;
+    } else if (pos[1] == 2) {
+      nPos[1] = 1;
+      nPos[2] = pos[2] + 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] - 15;
+      nPos[5] = pos[5] + 17;
+    } else if (pos[1] == 3) {
+      nPos[1] = 2;
+      nPos[2] = pos[2] - 17;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 17;
+      nPos[5] = pos[5] + 15;
+    } else {
+      nPos[1] = 3;
+      nPos[2] = pos[2] - 15;
+      nPos[3] = pos[3];
+      nPos[4] = pos[4] + 15;
+      nPos[5] = pos[5] - 17;
+    }
+  }
+  return nPos;
+}
+
+int* getZRotatePos(int* pos, int size, int dir) {
+  int* nPos = new int[size];
+  nPos[0] = pos[0];
+  if (pos[1] == 1) {
+    nPos[1] = 2; //change state variable    
+    nPos[2] = pos[2] - 14;
+    nPos[3] = pos[3] + 1;
+    nPos[4] = pos[4] - 16;
+    nPos[5] = pos[5] - 1;
+  } else {
+    nPos[1] = 1; //change state variable
+    nPos[2] = pos[2] + 14;
+    nPos[3] = pos[3] - 1;
+    nPos[4] = pos[4] + 16;
+    nPos[5] = pos[5] + 1;
+  }
+  return nPos;
+}
+
+int* getORotatePos(int* pos, int size, int dir) {
+  int* nPos = new int[size];
+  for (int i = 0; i < SHAPE_SIZE; i++) {
+    nPos[i] = pos[i];
+  }
+  return nPos;
+}
+
 int* genI() {
-  int* idxs = new int[4] {0, 1, 2, 3};
-  return idxs;
-}
-
-int* genZ() {
-  int* idxs = new int[4] {0, 1, 17, 18};
-  return idxs;
-}
-
-int* genS() {
-  int* idxs = new int[4] {1, 2, 16, 17};
+  int* idxs = new int[6] {1, 1, 0, 1, 2, 3};
   return idxs;
 }
 
 int* genJ() {
-  int* idxs = new int[4] {0, 16, 17, 18};
+  int* idxs = new int[6] {2, 3, 18, 17, 16, 0};
   return idxs;
 }
 
 int* genL() {
-  int* idxs = new int[4] {2, 16, 17, 18};
+  int* idxs = new int[6] {3, 3, 16, 17, 18, 2};
+  return idxs;
+}
+
+int* genS() {
+  int* idxs = new int[6] {4, 1, 16, 17, 1, 2};
   return idxs;
 }
 
 int* genT() {
-  int* idxs = new int[4] {1, 16, 17, 18};
+  int* idxs = new int[6] {5, 3, 18, 17, 16, 1};
+  return idxs;
+}
+
+int* genZ() {
+  int* idxs = new int[6] {6, 1, 0, 1, 17, 18};
   return idxs;
 }
 
 int* genO() {
-  int* idxs = new int[4] {0, 1, 16, 17};
+  int* idxs = new int[6] {7, 1, 0, 1, 16, 17};
   return idxs;
 }
 
