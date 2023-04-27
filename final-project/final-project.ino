@@ -23,6 +23,7 @@ int TESTING = false;
 int SHAPE_SIZE = 6;
 int RIGHT_ROTATE = 1;
 int LEFT_ROTATE = 2;
+int TRO = 6;
 
 int DROP_TIME = 50;
 
@@ -30,9 +31,10 @@ int DROP_TIME = 50;
 uint32_t RED = strip.Color(255, 0, 0);
 uint32_t GREEN = strip.Color(0, 255, 0);
 uint32_t BLUE = strip.Color(0, 0, 255);
+uint32_t WHITE = strip.Color(255, 255, 255);
 
 // NOTE: COLORS[0] is just a filler
-uint32_t* COLORS = new uint32_t[8] {strip.Color(0, 0, 0), strip.Color(255, 0 , 0), strip.Color(255, 127, 0), strip.Color(255, 255, 0), strip.Color(0, 255, 0), strip.Color(0, 0, 255), strip.Color(75, 0, 130), strip.Color(148, 0, 211)};
+uint32_t* COLORS = new uint32_t[8] {strip.Color(0, 0, 0), strip.Color(255, 0 , 0), strip.Color(255, 127, 0), strip.Color(255, 255, 0), strip.Color(0, 255, 0), strip.Color(0, 0, 255), strip.Color(148,0,211), strip.Color(255,20,147)};
 int COLORS_SIZE = 8;
 
 // declaring generating function prototypes
@@ -60,35 +62,66 @@ void setup() {
   pinMode(RIGHT_BTN, INPUT_PULLUP);
   pinMode(TOGGLE, INPUT_PULLUP);
   pinMode(POWER, INPUT_PULLUP);
+
+  for (int i = 0; i < NUM_COLS; i++) {
+    strip.setPixelColor(LED_INDEXING[TRO-1][i], WHITE);
+  }
+  strip.show();
 }
+
+int nextIdx = random(GENERATE_SHAPE_SIZE);
+int nextColorIdx = random(1, COLORS_SIZE);
 
 void loop() {
   // chase(strip.Color(255, 0, 0)); // Red
   // strip.setPixelColor(LED_INDEXING[0][6], strip.Color(0, 255, 0));
   // strip.show();
 
-  // int free_memory = freeMemory();
-  // Serial.print("Free memory BEFORE: ");
-  // Serial.println(free_memory);
+  int free_memory = freeMemory();
+  Serial.print("Free memory BEFORE: ");
+  Serial.println(free_memory);
 
-  int randIdx = random(GENERATE_SHAPE_SIZE);
+  int randIdx = nextIdx;
   int* shapeArray = GENERATE_SHAPE[randIdx]();
+  int colorIdx = nextColorIdx;
 
   for (int i = 2; i < 6; i++) {
-    shapeArray[i] += 4;
+    shapeArray[i] += TRO*NUM_COLS;
   }
+
+  nextIdx = random(GENERATE_SHAPE_SIZE);
+  nextColorIdx = random(1, COLORS_SIZE);
+
+  showNextShape(nextIdx, nextColorIdx);
   
-  int colorIdx = random(1, COLORS_SIZE);
   drop(shapeArray, SHAPE_SIZE, colorIdx);
+  // colorIdx = nextColorIdx;
+  
 
   delete[] shapeArray;
   clearRows();
 
-  // int free_memory1 = freeMemory();
-  // Serial.print("Free memory after: ");
-  // Serial.println(free_memory1);
+  int free_memory1 = freeMemory();
+  Serial.print("Free memory after: ");
+  Serial.println(free_memory1);
   
   delay(500);
+}
+
+void showNextShape(int shapeIdx, int colorIdx) {
+  for (int i = 0; i < (TRO - 2) * NUM_COLS; i++) {
+    int* rc = pos_to_idx(i);
+    int r = rc[0], c = rc[1];
+    strip.setPixelColor(LED_INDEXING[r][c], 0);
+    delete[] rc;
+  }
+  int* nextShape = GENERATE_SHAPE[shapeIdx]();
+  for (int i = 2; i < 6; i++) {
+    nextShape[i] += NUM_COLS * 2;
+  }
+  turn_on_idxs(nextShape, SHAPE_SIZE, COLORS[colorIdx]);
+
+  delete[] nextShape;
 }
 
 void turn_on_idxs(int* shape_idxs, int idxs_size, uint32_t color) {
@@ -220,7 +253,7 @@ bool isTogether(int* pos, int size) {
 
 void clearRows() {
   int counter = 0;
-  for (int row = NUM_ROWS - 1; row >= 0; row--) {
+  for (int row = NUM_ROWS - 1; row >= TRO; row--) {
     bool isFull = true;
     for (int col = 0; col < NUM_COLS; col++) {
       if (OCCUPIED[row][col] == 0) {
@@ -688,37 +721,37 @@ int* pos_to_idx(int pos) {
 }
 
 int* genI() {
-  int* idxs = new int[6] {1, 1, 0, 1, 2, 3};
+  int* idxs = new int[6] {1, 1, 6, 7, 8, 9};
   return idxs;
 }
 
 int* genJ() {
-  int* idxs = new int[6] {2, 3, 18, 17, 16, 0};
+  int* idxs = new int[6] {2, 3, 25, 24, 23, 7};
   return idxs;
 }
 
 int* genL() {
-  int* idxs = new int[6] {3, 3, 16, 17, 18, 2};
+  int* idxs = new int[6] {3, 3, 22, 23, 24, 8};
   return idxs;
 }
 
 int* genS() {
-  int* idxs = new int[6] {4, 1, 16, 17, 1, 2};
+  int* idxs = new int[6] {4, 1, 22, 23, 7, 8};
   return idxs;
 }
 
 int* genT() {
-  int* idxs = new int[6] {5, 3, 18, 17, 16, 1};
+  int* idxs = new int[6] {5, 3, 24, 23, 22, 7};
   return idxs;
 }
 
 int* genZ() {
-  int* idxs = new int[6] {6, 1, 0, 1, 17, 18};
+  int* idxs = new int[6] {6, 1, 6, 7, 23, 24};
   return idxs;
 }
 
 int* genO() {
-  int* idxs = new int[6] {7, 1, 0, 1, 16, 17};
+  int* idxs = new int[6] {7, 1, 7, 8, 23, 24};
   return idxs;
 }
 
