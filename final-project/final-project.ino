@@ -23,7 +23,7 @@ int TESTING = false;
 int SHAPE_SIZE = 6; // 2 values for shape and state; 4 values for shape indices
 int RIGHT_ROTATE = 1;
 int LEFT_ROTATE = 2;
-int TRO = 6;
+int TRO = 5;
 
 int DROP_TIME = 50;
 
@@ -113,7 +113,8 @@ void drawNextDisplayLine() {
 }
 
 void showNextShape(int shapeIdx, int colorIdx) {
-  for (int i = 0; i < (TRO - 2) * NUM_COLS; i++) {
+  // erase everything above the white line
+  for (int i = 0; i < (TRO - 1) * NUM_COLS; i++) {
     int* rc = pos_to_idx(i);
     int r = rc[0], c = rc[1];
     strip.setPixelColor(LED_INDEXING[r][c], 0);
@@ -121,7 +122,7 @@ void showNextShape(int shapeIdx, int colorIdx) {
   }
   int* nextShape = GENERATE_SHAPE[shapeIdx]();
   for (int i = 2; i < 6; i++) {
-    nextShape[i] += NUM_COLS * 2;
+    nextShape[i] += NUM_COLS * (TRO / 4);
   }
   turn_on_idxs(nextShape, SHAPE_SIZE, COLORS[colorIdx]);
 
@@ -306,6 +307,7 @@ void drop(int* curr_idxs, int size, int colorIdx) {
     else if (digitalRead(LEFT_BTN) == LOW) {
       delay(125);
       moveLeft(curr_idxs, size, color);
+      Serial.println("L");
     }
     else if (digitalRead(TOGGLE) == LOW) {
       strip.clear();
@@ -339,6 +341,10 @@ void drop(int* curr_idxs, int size, int colorIdx) {
         int* rc = pos_to_idx(curr_idxs[i]);
         int row = rc[0], col = rc[1];
         delete[] rc;
+        if (row <= TRO) {
+          gameOver();
+          return;
+        }
         OCCUPIED[row][col] = colorIdx;
       }
       break;
@@ -353,6 +359,28 @@ void drop(int* curr_idxs, int size, int colorIdx) {
     delete[] next_idxs;
 
     // delay(250); // TODO: CHANGE DELAY TO MILLIS (a non blocking solution so we can still take input)
+  }
+}
+
+void drawGameOver() {
+  strip.setPixelColor(LED_INDEXING[5][5], RED);
+}
+
+void gameOver() {
+  strip.clear();
+  strip.setPixelColor(LED_INDEXING[5][5], RED);
+  strip.show();
+  while (true) {
+    if (digitalRead(TOGGLE) == LOW) {
+      strip.clear();
+      for (int i = 0; i < NUM_ROWS; i++) {
+        for (int j = 0; j < NUM_COLS; j++) {
+          OCCUPIED[i][j] = 0;
+        }
+      }
+      drawNextDisplayLine();
+      return;
+    }
   }
 }
 
