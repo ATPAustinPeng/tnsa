@@ -20,7 +20,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800)
 int LED_INDEXING[NUM_ROWS][NUM_COLS];
 int OCCUPIED[NUM_ROWS][NUM_COLS];
 int TESTING = false;
-int SHAPE_SIZE = 6;
+int SHAPE_SIZE = 6; // 2 values for shape and state; 4 values for shape indices
 int RIGHT_ROTATE = 1;
 int LEFT_ROTATE = 2;
 
@@ -271,6 +271,13 @@ void drop(int* curr_idxs, int size, int colorIdx) {
       moveLeft(curr_idxs, size, color);
     }
     else if (digitalRead(TOGGLE) == LOW) {
+      strip.clear();
+      for (int i = 0; i < NUM_ROWS; i++) {
+        for (int j = 0; j < NUM_COLS; j++) {
+          OCCUPIED[i][j] = 0;
+        }
+      }
+      return;
     }
     else if (digitalRead(POWER) == LOW) {
       while (digitalRead(POWER) == LOW) {
