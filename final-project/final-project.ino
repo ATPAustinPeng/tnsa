@@ -363,12 +363,38 @@ void drop(int* curr_idxs, int size, int colorIdx) {
 }
 
 void drawGameOver() {
-  strip.setPixelColor(LED_INDEXING[5][5], RED);
+  int size = 18;
+  int* frown = new int[size];
+  frown[0] = 3;
+  frown[1] = 4;
+  frown[2] = 7;
+  frown[3] = 8;
+  frown[4] = 19;
+  frown[5] = 20;
+  frown[6] = 23;
+  frown[7] = 24;
+  frown[8] = 51;
+  frown[9] = 52;
+  frown[10] = 53;
+  frown[11] = 54;
+  frown[12] = 55;
+  frown[13] = 56;
+  frown[14] = 66;
+  frown[15] = 73;
+  frown[16] = 82;
+  frown[17] = 89;
+  for (int i = 0; i < size; i++) {
+    int* rc = pos_to_idx(frown[i] + (12*NUM_COLS) + 2);
+    int row = rc[0], col = rc[1];
+    delete[] rc;
+    strip.setPixelColor(LED_INDEXING[row][col], RED);
+  }
+  delete[] frown;
 }
 
 void gameOver() {
   strip.clear();
-  strip.setPixelColor(LED_INDEXING[5][5], RED);
+  drawGameOver();
   strip.show();
   while (true) {
     if (digitalRead(TOGGLE) == LOW) {
