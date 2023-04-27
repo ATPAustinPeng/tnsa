@@ -147,6 +147,7 @@ bool isNextACollision(int* pos, int size) {
     }
   }
   return false;
+}
 
 bool wallCollisionLeft(int* pos, int size) {
   for (int i = 2; i < size; i++) {
