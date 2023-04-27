@@ -2,6 +2,13 @@
 #include <string.h>
 #include <MemoryFree.h>
 
+#define RTRIGGER_BTN 8
+#define LTRIGGER_BTN 9
+#define RIGHT_BTN 10
+#define LEFT_BTN 11
+#define TOGGLE 12
+#define POWER 13
+
 
 #define PIN 6
 #define NUM_LEDS 512
@@ -16,6 +23,8 @@ int TESTING = false;
 int SHAPE_SIZE = 6;
 int RIGHT_ROTATE = 1;
 int LEFT_ROTATE = 2;
+
+int DROP_TIME = 250;
 
 // commonly used colors
 uint32_t RED = strip.Color(255, 0, 0);
@@ -120,9 +129,12 @@ void setup() {
   strip.begin();
   strip.setBrightness(BRIGHTNESS);
 
-  // for (int i = 0; i < NUM_COLS; i++) {
-  //   OCCUPIED[32][i] = 1;
-  // }
+  pinMode(RTRIGGER_BTN, INPUT_PULLUP);
+  pinMode(LTRIGGER_BTN, INPUT_PULLUP);
+  pinMode(LEFT_BTN, INPUT_PULLUP);
+  pinMode(RIGHT_BTN, INPUT_PULLUP);
+  pinMode(TOGGLE, INPUT_PULLUP);
+  pinMode(POWER, INPUT_PULLUP);
 }
 
 void loop() {
@@ -276,14 +288,49 @@ bool wallCollisionRight(int* pos, int size) {
 }
 
 bool isTogether(int* pos, int size) {
-
+  return false;
 }
 
 void drop(int* curr_idxs, int size, uint32_t color) {
+  int time_since_last_drop = millis();
+
   while (true) {
+    if (digitalRead(RTRIGGER_BTN) == LOW) {
+      Serial.println("RT");
+    }
+    else if (digitalRead(LTRIGGER_BTN) == LOW) {
+      delay(150);
+      Serial.println("LT");
+      rotate(curr_idxs, size, color, RIGHT_ROTATE);
+    }
+    else if (digitalRead(RIGHT_BTN) == LOW) {
+      delay(125);
+      Serial.println("R");
+      moveRight(curr_idxs, size, color);
+    }
+    else if (digitalRead(LEFT_BTN) == LOW) {
+      delay(125);
+      Serial.println("L");
+      moveLeft(curr_idxs, size, color);
+    }
+    else if (digitalRead(TOGGLE) == LOW) {
+      Serial.println("TOGGLE");
+    }
+    else if (digitalRead(POWER) == LOW) {
+      while (digitalRead(POWER) == LOW) {
+        if (digitalRead(POWER) == HIGH) break;
+      }
+    }
+
+    if (millis() - time_since_last_drop < DROP_TIME) {
+      continue;
+    } else {
+      time_since_last_drop = millis();
+    }
+
     // moveRight(curr_idxs, size, color);
     // moveLeft(curr_idxs, size, color);
-    rotate(curr_idxs, size, color, RIGHT_ROTATE);
+    // rotate(curr_idxs, size, color, RIGHT_ROTATE);
     int* next_idxs = getNextDownPos(curr_idxs, size);
 
     bool isCollision = isNextACollision(next_idxs, size);
@@ -306,7 +353,8 @@ void drop(int* curr_idxs, int size, uint32_t color) {
       curr_idxs[i] = next_idxs[i];
     }
     delete[] next_idxs;
-    delay(100);
+
+    // delay(250); // TODO: CHANGE DELAY TO MILLIS (a non blocking solution so we can still take input)
   }
 }
 
