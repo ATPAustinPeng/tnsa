@@ -63,9 +63,7 @@ void setup() {
   pinMode(TOGGLE, INPUT_PULLUP);
   pinMode(POWER, INPUT_PULLUP);
 
-  for (int i = 0; i < NUM_COLS; i++) {
-    strip.setPixelColor(LED_INDEXING[TRO-1][i], WHITE);
-  }
+  drawNextDisplayLine();
   strip.show();
 }
 
@@ -106,6 +104,12 @@ void loop() {
   Serial.println(free_memory1);
   
   delay(500);
+}
+
+void drawNextDisplayLine() {
+  for (int i = 0; i < NUM_COLS; i++) {
+    strip.setPixelColor(LED_INDEXING[TRO-1][i], WHITE);
+  }
 }
 
 void showNextShape(int shapeIdx, int colorIdx) {
@@ -310,6 +314,7 @@ void drop(int* curr_idxs, int size, int colorIdx) {
           OCCUPIED[i][j] = 0;
         }
       }
+      drawNextDisplayLine();
       return;
     }
     else if (digitalRead(POWER) == LOW) {
