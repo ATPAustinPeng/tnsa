@@ -14,7 +14,7 @@
 #define NUM_LEDS 512
 #define NUM_ROWS 32
 #define NUM_COLS 16
-#define BRIGHTNESS 8 // to reduce current for 256 NeoPixels
+#define BRIGHTNESS 5 // to reduce current for 256 NeoPixels
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 int LED_INDEXING[NUM_ROWS][NUM_COLS];
@@ -24,12 +24,16 @@ int SHAPE_SIZE = 6;
 int RIGHT_ROTATE = 1;
 int LEFT_ROTATE = 2;
 
-int DROP_TIME = 250;
+int DROP_TIME = 50;
 
 // commonly used colors
 uint32_t RED = strip.Color(255, 0, 0);
 uint32_t GREEN = strip.Color(0, 255, 0);
 uint32_t BLUE = strip.Color(0, 0, 255);
+
+// NOTE: COLORS[0] is just a filler
+uint32_t* COLORS = new uint32_t[8] {strip.Color(0, 0, 0), strip.Color(255, 0 , 0), strip.Color(255, 127, 0), strip.Color(255, 255, 0), strip.Color(0, 255, 0), strip.Color(0, 0, 255), strip.Color(75, 0, 130), strip.Color(148, 0, 211)};
+int COLORS_SIZE = 8;
 
 // declaring generating function prototypes
 int* genI();
@@ -40,87 +44,8 @@ int* genL();
 int* genT();
 int* genO();
 
-// Note: WE IMPLEMENT THE NINTENDO ROTATION SYSTEM
-
-void create_led_indexing() {
-  int leds_per_strip = 256;
-  int step_size = 8;
-
-  int counter = 0;
-  int led_idx_i = 0;
-  int led_idx_j = 0;
-
-  // column 1
-  for (int i = leds_per_strip - step_size; i >= 0; i -= step_size) {
-    if (counter % 2 == 1) {
-      for (int ii = i; ii < i + 8; ii++) {
-        LED_INDEXING[led_idx_i][led_idx_j] = ii;
-        led_idx_j++;
-      }
-      led_idx_i++;
-      led_idx_j = 0;
-    } else {
-      for (int ii = i + 7; ii >= i; ii--) {
-        LED_INDEXING[led_idx_i][led_idx_j] = ii;
-        led_idx_j++;
-      }
-      led_idx_i++;
-      led_idx_j = 0;
-    }
-    counter++;
-  }
-
-  counter = 0;
-  led_idx_i = 0;
-  led_idx_j = 8;
-
-  // column 2
-  for (int i = leds_per_strip; i < leds_per_strip * 2; i += step_size) {
-    if (counter % 2 == 1) {
-      for (int ii = i; ii < i + 8; ii++) {
-        LED_INDEXING[led_idx_i][led_idx_j] = ii;
-        led_idx_j++;
-      }
-      led_idx_i++;
-      led_idx_j = 8;
-    } else {
-      for (int ii = i + 7; ii >= i; ii--) {
-        LED_INDEXING[led_idx_i][led_idx_j] = ii;
-        led_idx_j++;
-      }
-      led_idx_i++;
-      led_idx_j = 8;
-    }
-    counter++;
-  }
-}
-
-void print_led_indexing() {
-  // Determine the number of rows and columns in the array
-  int numRows = sizeof(LED_INDEXING) / sizeof(LED_INDEXING[0]);
-  int numCols = sizeof(LED_INDEXING[0]) / sizeof(LED_INDEXING[0][0]);
-
-  // Iterate over the array using the determined ranges
-  for (int i = 0; i < numRows; i++) {
-    for (int j = 0; j < numCols; j++) {
-      // Access the element at row i and column j
-      int element = LED_INDEXING[i][j];
-      Serial.print(element);
-      Serial.print(",");
-    }
-    Serial.println();
-  }
-}
-
-// given the wack position in array (ex. value from 0 to 511)
-// convert the value to the actual position (row, col) to light up using array indexing
-int* pos_to_idx(int pos) {
-  // int row = (pos % NUM_LEDS) / NUM_COLS;
-  // int col = (pos % NUM_LEDS) % NUM_COLS;
-  int row = pos / NUM_COLS;
-  int col = pos % NUM_COLS;
-  return new int[2] {row, col};
-}
+int* (*GENERATE_SHAPE[])() = {genI, genZ, genS, genJ, genL, genT, genO};
+int GENERATE_SHAPE_SIZE = 7;
 
 void setup() {
   Serial.begin(9600);
@@ -146,56 +71,25 @@ void loop() {
   // Serial.print("Free memory BEFORE: ");
   // Serial.println(free_memory);
 
-  int* shapeArray = genI();
-  drop(shapeArray, SHAPE_SIZE, RED);
+  int randIdx = random(GENERATE_SHAPE_SIZE);
+  int* shapeArray = GENERATE_SHAPE[randIdx]();
 
-  shapeArray = genZ();
-  drop(shapeArray, SHAPE_SIZE, GREEN);
-
-  shapeArray = genS();
-  drop(shapeArray, SHAPE_SIZE, BLUE);
+  for (int i = 2; i < 6; i++) {
+    shapeArray[i] += 4;
+  }
   
-  shapeArray = genJ();
-  drop(shapeArray, SHAPE_SIZE, RED);
-
-  shapeArray = genL();
-  drop(shapeArray, SHAPE_SIZE, GREEN);
-
-  shapeArray = genT();
-  drop(shapeArray, SHAPE_SIZE, BLUE);
-
-  shapeArray = genO();
-  drop(shapeArray, SHAPE_SIZE, RED);
+  int colorIdx = random(1, COLORS_SIZE);
+  drop(shapeArray, SHAPE_SIZE, colorIdx);
 
   delete[] shapeArray;
+  clearRows();
 
-  // chase(strip.Color(0, 255, 0)); // Green
-  // chase(strip.Color(0, 0, 255)); // Blue
-  // colorWipe(strip.Color(255, 0, 0), 50);      // Red
-  // colorWipe(strip.Color(0, 255, 0), 50);      // Green
-  // colorWipe(strip.Color(0, 0, 255), 50);      // Blue
-
-  // Send a theater pixel chase in...
-  // theaterChase(strip.Color(255, 255, 255), 50);     // White
-
-  // rainbow(1);
+  // int free_memory1 = freeMemory();
+  // Serial.print("Free memory after: ");
+  // Serial.println(free_memory1);
   
-  // strip.clear();
   delay(500);
 }
-
-// void generate(uint32_t color) {
-//   int* (*generateFuncs[])() = {genI, genZ, genS, genJ, genL, genT, genO};
-//   int generateFuncs_size = 7;
-
-//   int randIdx = random(7);
-//   Serial.println(randIdx);
-//   int* shape_idxs = generateFuncs[randIdx]();
-//   turn_on_idxs(shape_idxs, SHAPE_SIZE, BLUE);
-//   delay(1500);
-//   turn_off_idxs(shape_idxs, SHAPE_SIZE);
-//   delay(1500);
-// }
 
 void turn_on_idxs(int* shape_idxs, int idxs_size, uint32_t color) {
   for (int i = 2; i < idxs_size; i++) {
@@ -246,16 +140,13 @@ bool isNextACollision(int* pos, int size) {
     int* rc = pos_to_idx(pos[i]);
     int row = rc[0], col = rc[1];
     delete[] rc;
-    if (OCCUPIED[row][col] == 1) {
-      // Serial.println("hit another block");
+    if (OCCUPIED[row][col] != 0) {
       return true;
     } else if (row >= NUM_ROWS) {
-      // Serial.println("hit bottom");
       return true;
     }
   }
   return false;
-}
 
 bool wallCollisionLeft(int* pos, int size) {
   for (int i = 2; i < size; i++) {
@@ -263,7 +154,6 @@ bool wallCollisionLeft(int* pos, int size) {
     int row = rc[0], col = rc[1];
     delete[] rc;
     if (OCCUPIED[row][col] == 1) {
-      // Serial.println("hit another block");
       return true;
     } else if(col % 16 == 15) {
       return true;
@@ -278,7 +168,6 @@ bool wallCollisionRight(int* pos, int size) {
     int row = rc[0], col = rc[1];
     delete[] rc;
     if (OCCUPIED[row][col] == 1) {
-      // Serial.println("hit another block");
       return true;
     } else if(col % 16 == 0) {
       return true;
@@ -287,34 +176,100 @@ bool wallCollisionRight(int* pos, int size) {
   return false;
 }
 
+// isTogether = true means the rotation is valid
 bool isTogether(int* pos, int size) {
-  return false;
+  bool together = true;
+  int* rc1 = pos_to_idx(pos[2]);
+  int* rc2 = pos_to_idx(pos[3]);
+  int* rc3 = pos_to_idx(pos[4]);
+  int* rc4 = pos_to_idx(pos[5]);
+  int row1 = rc1[0], col1 = rc1[1];
+  int row2 = rc2[0], col2 = rc2[1];
+  int row3 = rc3[0], col3 = rc3[1];
+  int row4 = rc4[0], col4 = rc4[1];
+  delete[] rc1;
+  delete[] rc2;
+  delete[] rc3;
+  delete[] rc4;
+  if (pos[0] == 5) { //t shape
+    if (abs((row2-row1) + (col2-col1)) != 1) {
+      together = false;
+    }
+    if (abs((row2-row3) + (col2-col3)) != 1) {
+      together = false;
+    }
+    if (abs((row2-row4) + (col2-col4)) != 1) {
+      together = false;
+    }
+  } else if (pos[0] == 7) { //o shape
+    return true;
+  } else { //all other shapes
+    if (abs((row1-row2) + (col1-col2)) != 1) {
+      together = false;
+    }
+    if (abs((row2-row3) + (col2-col3)) != 1) {
+      together = false;
+    }
+    if (abs((row3-row4) + (col3-col4)) != 1) {
+      together = false;
+    }
+  }
+  return together;
 }
 
-void drop(int* curr_idxs, int size, uint32_t color) {
+void clearRows() {
+  int counter = 0;
+  for (int row = NUM_ROWS - 1; row >= 0; row--) {
+    bool isFull = true;
+    for (int col = 0; col < NUM_COLS; col++) {
+      if (OCCUPIED[row][col] == 0) {
+        isFull = false;
+        break;
+      }
+    }
+    if (isFull) {
+      for (int col = 0; col < NUM_COLS; col++) {
+        strip.setPixelColor(LED_INDEXING[row][col], 0);
+      }
+      strip.show();
+      delay(500);
+      counter++;
+    } else {
+      for (int col = 0; col < NUM_COLS; col++) {
+        OCCUPIED[row+counter][col] = OCCUPIED[row][col];
+        if (OCCUPIED[row][col] != 0 && counter != 0) {
+          strip.setPixelColor(LED_INDEXING[row+counter][col], COLORS[OCCUPIED[row][col]]);
+          strip.setPixelColor(LED_INDEXING[row][col], 0);
+        }
+      }
+    }
+  }
+  strip.show();
+}
+
+void drop(int* curr_idxs, int size, int colorIdx) {
   int time_since_last_drop = millis();
+
+  uint32_t color = COLORS[colorIdx];
 
   while (true) {
     if (digitalRead(RTRIGGER_BTN) == LOW) {
-      Serial.println("RT");
+      delay(150);
+      rotate(curr_idxs, size, color, RIGHT_ROTATE);
     }
     else if (digitalRead(LTRIGGER_BTN) == LOW) {
       delay(150);
-      Serial.println("LT");
-      rotate(curr_idxs, size, color, RIGHT_ROTATE);
+      rotate(curr_idxs, size, color, LEFT_ROTATE);
     }
     else if (digitalRead(RIGHT_BTN) == LOW) {
       delay(125);
-      Serial.println("R");
       moveRight(curr_idxs, size, color);
     }
     else if (digitalRead(LEFT_BTN) == LOW) {
       delay(125);
-      Serial.println("L");
       moveLeft(curr_idxs, size, color);
     }
     else if (digitalRead(TOGGLE) == LOW) {
-      Serial.println("TOGGLE");
     }
     else if (digitalRead(POWER) == LOW) {
       while (digitalRead(POWER) == LOW) {
@@ -322,32 +277,29 @@ void drop(int* curr_idxs, int size, uint32_t color) {
       }
     }
 
+    // // IF TIME SINCE LAST BLOCK DROP less than DROP_TIME
     if (millis() - time_since_last_drop < DROP_TIME) {
       continue;
     } else {
       time_since_last_drop = millis();
     }
 
-    // moveRight(curr_idxs, size, color);
-    // moveLeft(curr_idxs, size, color);
-    // rotate(curr_idxs, size, color, RIGHT_ROTATE);
     int* next_idxs = getNextDownPos(curr_idxs, size);
 
     bool isCollision = isNextACollision(next_idxs, size);
+
     if (isCollision) { // if moving results in collision, don't move, set OCCUPIED with current locations
       for (int i = 2; i < size; i++) {
         int* rc = pos_to_idx(curr_idxs[i]);
         int row = rc[0], col = rc[1];
         delete[] rc;
-        OCCUPIED[row][col] = 1;
+        OCCUPIED[row][col] = colorIdx;
       }
       break;
     } else {
       turn_off_idxs(curr_idxs, SHAPE_SIZE);
       turn_on_idxs(next_idxs, SHAPE_SIZE, color);
     }
-    
-    // strip.show(); //extra????
     
     for (int i = 2; i < SHAPE_SIZE; i++) {
       curr_idxs[i] = next_idxs[i];
@@ -360,7 +312,7 @@ void drop(int* curr_idxs, int size, uint32_t color) {
 
 void moveLeft(int* curr_idxs, int size, uint32_t color) {
   int* next_idxs = getNextLeftPos(curr_idxs, size);
-  bool isCollision = wallCollisionLeft(next_idxs, size);
+  bool isCollision = wallCollisionLeft(next_idxs, size) || isNextACollision(next_idxs, size);
   if (!isCollision) {
     turn_off_idxs(curr_idxs, SHAPE_SIZE);
     turn_on_idxs(next_idxs, SHAPE_SIZE, color);
@@ -373,7 +325,7 @@ void moveLeft(int* curr_idxs, int size, uint32_t color) {
 
 void moveRight(int* curr_idxs, int size, uint32_t color) {
   int* next_idxs = getNextRightPos(curr_idxs, size);
-  bool isCollision = wallCollisionRight(next_idxs, size);
+  bool isCollision = wallCollisionRight(next_idxs, size) || isNextACollision(next_idxs, size);
   if (!isCollision) {
     turn_off_idxs(curr_idxs, SHAPE_SIZE);
     turn_on_idxs(next_idxs, SHAPE_SIZE, color);
@@ -401,7 +353,7 @@ void rotate(int* curr_idxs, int size, uint32_t color, int dir) {
   } else {
     next_idxs = getORotatePos(curr_idxs, size, dir);
   }
-  bool isCollision = isNextACollision(next_idxs, size);
+  bool isCollision = isNextACollision(next_idxs, size) || !isTogether(next_idxs, size);
   if (!isCollision) {
     turn_off_idxs(curr_idxs, SHAPE_SIZE);
     turn_on_idxs(next_idxs, SHAPE_SIZE, color);
@@ -654,6 +606,86 @@ int* getORotatePos(int* pos, int size, int dir) {
   return nPos;
 }
 
+void create_led_indexing() {
+  int leds_per_strip = 256;
+  int step_size = 8;
+
+  int counter = 0;
+  int led_idx_i = 0;
+  int led_idx_j = 0;
+
+  // column 1
+  for (int i = leds_per_strip - step_size; i >= 0; i -= step_size) {
+    if (counter % 2 == 1) {
+      for (int ii = i; ii < i + 8; ii++) {
+        LED_INDEXING[led_idx_i][led_idx_j] = ii;
+        led_idx_j++;
+      }
+      led_idx_i++;
+      led_idx_j = 0;
+    } else {
+      for (int ii = i + 7; ii >= i; ii--) {
+        LED_INDEXING[led_idx_i][led_idx_j] = ii;
+        led_idx_j++;
+      }
+      led_idx_i++;
+      led_idx_j = 0;
+    }
+    counter++;
+  }
+
+  counter = 0;
+  led_idx_i = 0;
+  led_idx_j = 8;
+
+  // column 2
+  for (int i = leds_per_strip; i < leds_per_strip * 2; i += step_size) {
+    if (counter % 2 == 1) {
+      for (int ii = i; ii < i + 8; ii++) {
+        LED_INDEXING[led_idx_i][led_idx_j] = ii;
+        led_idx_j++;
+      }
+      led_idx_i++;
+      led_idx_j = 8;
+    } else {
+      for (int ii = i + 7; ii >= i; ii--) {
+        LED_INDEXING[led_idx_i][led_idx_j] = ii;
+        led_idx_j++;
+      }
+      led_idx_i++;
+      led_idx_j = 8;
+    }
+    counter++;
+  }
+}
+
+void print_led_indexing() {
+  // Determine the number of rows and columns in the array
+  int numRows = sizeof(LED_INDEXING) / sizeof(LED_INDEXING[0]);
+  int numCols = sizeof(LED_INDEXING[0]) / sizeof(LED_INDEXING[0][0]);
+
+  // Iterate over the array using the determined ranges
+  for (int i = 0; i < numRows; i++) {
+    for (int j = 0; j < numCols; j++) {
+      // Access the element at row i and column j
+      int element = LED_INDEXING[i][j];
+      Serial.print(element);
+      Serial.print(",");
+    }
+    Serial.println();
+  }
+}
+
+// given the wack position in array (ex. value from 0 to 511)
+// convert the value to the actual position (row, col) to light up using array indexing
+int* pos_to_idx(int pos) {
+  // int row = (pos % NUM_LEDS) / NUM_COLS;
+  // int col = (pos % NUM_LEDS) % NUM_COLS;
+  int row = pos / NUM_COLS;
+  int col = pos % NUM_COLS;
+  return new int[2] {row, col};
+}
+
 int* genI() {
   int* idxs = new int[6] {1, 1, 0, 1, 2, 3};
   return idxs;
@@ -711,57 +743,5 @@ void chase(uint32_t c) {
     strip.setPixelColor(LED_INDEXING[eraseRow][eraseCol], 0); // Erase pixel a few steps back
     strip.show();
     delay(5);
-  }
-}
-
-void colorWipe(uint32_t c, uint8_t wait) {
-  for(int i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
-    strip.show();
-    delay(wait);
-  }
-}
-
-void rainbow(uint8_t wait) {
-  for(int j=0; j<1000; j++) 
-  {
-    for(int i=0; i<strip.numPixels(); i++) 
-    {
-      strip.setPixelColor(i, Wheel((i+j) & 255));
-    }
-    strip.show();
-    delay(wait);
-  }
-}
-
-// Theatre-style crawling lights.
-void theaterChase(uint32_t c, uint8_t wait) {
-  for (int j=0; j<10; j++) { //do 10 cycles of chasing
-    for (int q=0; q < 3; q++) {
-      for (int i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, c);    //turn every third pixel on
-      }
-      strip.show();
-
-      delay(wait);
-
-      for (int i=0; i < strip.numPixels(); i=i+3) {
-        strip.setPixelColor(i+q, 0);        //turn every third pixel off
-      }
-    }
-  }
-}
-
-// Input a value 0 to 255 to get a color value.
-// The colours are a transition r - g - b - back to r.
-uint32_t Wheel(byte WheelPos) {
-  if(WheelPos < 85) {
-   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-  } else if(WheelPos < 170) {
-   WheelPos -= 85;
-   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  } else {
-   WheelPos -= 170;
-   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
 }
