@@ -134,28 +134,47 @@ void loop() {
   // Serial.print("Free memory BEFORE: ");
   // Serial.println(free_memory);
 
-  int* shapeArray = genI();
-  drop(shapeArray, SHAPE_SIZE, RED);
-
-  shapeArray = genZ();
-  drop(shapeArray, SHAPE_SIZE, GREEN);
-
-  shapeArray = genS();
-  drop(shapeArray, SHAPE_SIZE, BLUE);
+  for (int i = 0; i <= 14; i += 2) {
   
-  shapeArray = genJ();
-  drop(shapeArray, SHAPE_SIZE, RED);
+    int* shapeArray = genO();
+    
 
-  shapeArray = genL();
-  drop(shapeArray, SHAPE_SIZE, GREEN);
+    for (int j = 0; j < i; j++) {
+      moveRight(shapeArray, SHAPE_SIZE, RED);
+    }
+    // int free_memory = freeMemory();
+    // Serial.print("Free memory BEFORE: ");
+    // Serial.println(free_memory);
+    drop(shapeArray, SHAPE_SIZE, RED);
 
-  shapeArray = genT();
-  drop(shapeArray, SHAPE_SIZE, BLUE);
+    delete[] shapeArray;
 
-  shapeArray = genO();
-  drop(shapeArray, SHAPE_SIZE, RED);
+    // int free_memory1 = freeMemory();
+    // Serial.print("Free memory AFTER: ");
+    // Serial.println(free_memory1);
+  }
+  Serial.println("out of drop");
+  clearRows();
 
-  delete[] shapeArray;
+  // shapeArray = genZ();
+  // drop(shapeArray, SHAPE_SIZE, GREEN);
+
+  // shapeArray = genS();
+  // drop(shapeArray, SHAPE_SIZE, BLUE);
+  
+  // shapeArray = genJ();
+  // drop(shapeArray, SHAPE_SIZE, RED);
+
+  // shapeArray = genL();
+  // drop(shapeArray, SHAPE_SIZE, GREEN);
+
+  // shapeArray = genT();
+  // drop(shapeArray, SHAPE_SIZE, BLUE);
+
+  // shapeArray = genO();
+  // drop(shapeArray, SHAPE_SIZE, RED);
+
+  // delete[] shapeArray;
 
   // chase(strip.Color(0, 255, 0)); // Green
   // chase(strip.Color(0, 0, 255)); // Blue
@@ -184,6 +203,30 @@ void loop() {
 //   turn_off_idxs(shape_idxs, SHAPE_SIZE);
 //   delay(1500);
 // }
+
+void turn_on_clear(int* shape_idxs, int idxs_size, uint32_t color) {
+  for (int i = 0; i < idxs_size; i++) {
+    if (shape_idxs[i] != -1) {
+      int* rc = pos_to_idx(shape_idxs[i]);
+      int r = rc[0], c = rc[1];
+      strip.setPixelColor(LED_INDEXING[r][c], color);
+      delete[] rc;
+    }
+  }
+  strip.show();
+}
+
+void turn_off_clear(int* shape_idxs, int idxs_size, uint32_t color) {
+  for (int i = 0; i < idxs_size; i++) {
+    if (shape_idxs[i] != -1) {
+      int* rc = pos_to_idx(shape_idxs[i]);
+      int r = rc[0], c = rc[1];
+      strip.setPixelColor(LED_INDEXING[r][c], 0);
+      delete[] rc;
+    }
+  }
+  strip.show();
+}
 
 void turn_on_idxs(int* shape_idxs, int idxs_size, uint32_t color) {
   for (int i = 2; i < idxs_size; i++) {
@@ -275,15 +318,108 @@ bool wallCollisionRight(int* pos, int size) {
   return false;
 }
 
-bool isTogether(int* pos, int size) {
+// bool isTogether(int* pos, int size) {
+//   return;
+// }
 
+void clearRows() {
+  int counter = 0;
+  for (int row = NUM_ROWS-1; row >= 0; row--) {
+    bool isFull = true;
+    for (int col = 0; col < NUM_COLS; col++) {
+      if (OCCUPIED[row][col] == 0) {
+        isFull = false;
+      }
+    }
+    if (isFull) {
+      for (int col = 0; col < NUM_COLS; col++) {
+        strip.setPixelColor(LED_INDEXING[row][col], 0);
+      }
+      strip.show();
+      delay(500);
+      counter++;
+    } else {
+      for (int col = 0; col < NUM_COLS; col++) {
+        OCCUPIED[row+counter][col] = OCCUPIED[row][col];
+        if (OCCUPIED[row][col] != 0 && counter != 0) {
+          strip.setPixelColor(LED_INDEXING[row+counter][col], RED);
+          strip.setPixelColor(LED_INDEXING[row][col], 0);
+        }
+      }
+    }
+  }
+  strip.show();
 }
+
+// void clearRows() {
+//   for (int row = 0; row < NUM_ROWS; row++) {
+//     bool isFull = true;
+//     int* curr_idxs;
+//     int* new_idxs;
+//     for (int col = 0; col < NUM_COLS; col++) {
+//       if (OCCUPIED[row][col] == 0) {
+//         isFull = false;
+//       }
+//     }
+//     if (isFull) {
+//       for (int t = 0; t < NUM_COLS; t++) {
+//         strip.setPixelColor(LED_INDEXING[row][t], 0);
+//       }
+//       strip.show();
+//       delay(500);
+
+
+//       for (int i = row-1; i >= 0; i--) {
+//         bool isEmpty = true;
+//         for (int j = 0; j < NUM_COLS; j++) {
+//           int checker = OCCUPIED[i][j];
+//           if (checker != 0) {
+//             isEmpty = false;
+//             break;
+//           }
+//         }
+//         if (isEmpty) {
+//           int size = ((row-i)-1)*NUM_COLS;
+//           curr_idxs = new int[size];          
+//           new_idxs = new int[size];
+//           int counter = 0;
+//           for (int a = i+1; a < row; a++) {
+//             for (int b = 0; b < NUM_COLS; b++) {
+//               if (OCCUPIED[a][b] != 0) {
+//                 curr_idxs[counter] = a*16+b;
+//               } else{
+//                 curr_idxs[counter] = -1;
+//               }
+//               OCCUPIED[a][b] = OCCUPIED[a-1][b];
+//               counter++;
+//             }
+//           }
+//           for (int c = 0; c < size; c++) {
+//             new_idxs[c] = curr_idxs[c] + 16;
+//           }
+//           turn_off_clear(curr_idxs, size, 0);
+//           turn_on_clear(new_idxs, size, RED); //fix color
+//           break;
+//         }
+//       }
+//     }
+//     delete[] curr_idxs;
+//     delete[] new_idxs;
+//   }
+// }
 
 void drop(int* curr_idxs, int size, uint32_t color) {
   while (true) {
     // moveRight(curr_idxs, size, color);
     // moveLeft(curr_idxs, size, color);
-    rotate(curr_idxs, size, color, RIGHT_ROTATE);
+    // int free_memory = freeMemory();
+    // Serial.print("Free memory BEFORE: ");
+    // Serial.println(free_memory);
+    // rotate(curr_idxs, size, color, RIGHT_ROTATE);
+    // int free_memory1 = freeMemory();
+    // Serial.print("Free memory AFTER: ");
+    // Serial.println(free_memory1);
+    
     int* next_idxs = getNextDownPos(curr_idxs, size);
 
     bool isCollision = isNextACollision(next_idxs, size);
@@ -306,7 +442,7 @@ void drop(int* curr_idxs, int size, uint32_t color) {
       curr_idxs[i] = next_idxs[i];
     }
     delete[] next_idxs;
-    delay(100);
+    delay(20);
   }
 }
 
